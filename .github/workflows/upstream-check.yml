@@ -1,0 +1,69 @@
+name: Check Upstream Update
+
+on:
+  schedule:
+    # Run daily at 00:00 UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: 245.2
+        fetch-depth: 0
+
+    - name: Add upstream remote
+      run: |
+        git remote add upstream https://github.com/LostCityRS/Engine-TS.git || true
+        git remote -v
+
+    - name: Fetch upstream
+      run: |
+        git fetch upstream 245.2
+
+    - name: Check if merge is clean
+      id: merge_check
+      run: |
+        echo "Attempting test merge..."
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        # Try to merge upstream/245.2 into current branch
+        if git merge --no-commit --no-ff upstream/245.2; then
+          echo "merge_status=clean" >> $GITHUB_OUTPUT
+          echo "✅ Merge is clean! No conflicts detected."
+          git merge --abort
+        else
+          echo "merge_status=conflicts" >> $GITHUB_OUTPUT
+          echo "⚠️ Merge conflicts detected!"
+          git merge --abort
+          exit 1
+        fi
+
+    - name: Report status
+      if: always()
+      run: |
+        if [ "${{ steps.merge_check.outputs.merge_status }}" = "clean" ]; then
+          echo "## ✅ Upstream Update Status: CLEAN" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The branch \`245.2\` can be updated cleanly from upstream." \
+            >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Run the following commands to update:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "git fetch upstream 245.2" >> $GITHUB_STEP_SUMMARY
+          echo "git merge upstream/245.2" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "## ⚠️ Upstream Update Status: CONFLICTS" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The branch \`245.2\` has conflicts with upstream and cannot" \
+            "be merged cleanly." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Manual resolution is required." >> $GITHUB_STEP_SUMMARY
+        fi
