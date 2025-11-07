@@ -1,5 +1,9 @@
 name: Check Upstream Update
 
+# This workflow automatically checks if the branch 245.2 can be updated cleanly
+# from the upstream parent repository (LostCityRS/Engine-TS).
+# It runs daily and can also be triggered manually.
+
 on:
   schedule:
     # Run daily at 00:00 UTC
