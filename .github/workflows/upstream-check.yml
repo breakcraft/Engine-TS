@@ -41,7 +41,7 @@ jobs:
         if git merge --no-commit --no-ff upstream/245.2; then
           echo "merge_status=clean" >> $GITHUB_OUTPUT
           echo "✅ Merge is clean! No conflicts detected."
-          git merge --abort
+          git reset --hard HEAD
         else
           echo "merge_status=conflicts" >> $GITHUB_OUTPUT
           echo "⚠️ Merge conflicts detected!"
@@ -66,7 +66,7 @@ jobs:
         else
           echo "## ⚠️ Upstream Update Status: CONFLICTS" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The branch \`245.2\` has conflicts with upstream and cannot" \
+          echo "The branch \`245.2\` has conflicts with upstream and cannot " \
             "be merged cleanly." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Manual resolution is required." >> $GITHUB_STEP_SUMMARY
