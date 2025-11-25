@@ -32,7 +32,24 @@ export function generatePixelOrder(img: { bitmap: Bitmap }) {
     return columnMajorScore < rowMajorScore ? 0 : 1;
 }
 
-export function writeImage(img: { bitmap: Bitmap }, data: Packet, index: Packet, colors: number[], meta: Sprite | null = null) {
+function buildColorIndex(colors: number[]): Map<number, number> {
+    const colorIndex = new Map<number, number>();
+
+    for (let i = 0; i < colors.length; i++) {
+        colorIndex.set(colors[i], i);
+    }
+
+    return colorIndex;
+}
+
+export function writeImage(
+    img: { bitmap: Bitmap },
+    data: Packet,
+    index: Packet,
+    colors: number[],
+    meta: Sprite | null = null,
+    colorIndex?: Map<number, number>
+) {
     let left = 0;
     let top = 0;
     let right = img.bitmap.width;
@@ -50,11 +67,10 @@ export function writeImage(img: { bitmap: Bitmap }, data: Packet, index: Packet,
     index.p2(right); // actual width
     index.p2(bottom); // actual height
 
-    let pixelOrder = generatePixelOrder(img);
-    if (meta) {
-        pixelOrder = meta.pixelOrder;
-    }
+    const pixelOrder = meta ? meta.pixelOrder : generatePixelOrder(img);
     index.p1(pixelOrder);
+
+    const paletteIndex = colorIndex ?? buildColorIndex(colors);
 
     if (pixelOrder === 0) {
         for (let j = 0; j < img.bitmap.width * img.bitmap.height; j++) {
@@ -71,12 +87,12 @@ export function writeImage(img: { bitmap: Bitmap }, data: Packet, index: Packet,
             const blue = img.bitmap.data[pos + 2];
             const rgb = ((red << 16) | (green << 8) | blue) >>> 0;
 
-            const index = colors.indexOf(rgb);
-            if (index === -1) {
+            const color = paletteIndex.get(rgb);
+            if (typeof color === 'undefined') {
                 break;
             }
 
-            data.p1(index);
+            data.p1(color);
         }
     } else if (pixelOrder === 1) {
         for (let x = 0; x < img.bitmap.width; x++) {
@@ -92,12 +108,12 @@ export function writeImage(img: { bitmap: Bitmap }, data: Packet, index: Packet,
                 const blue = img.bitmap.data[pos + 2];
                 const rgb = ((red << 16) | (green << 8) | blue) >>> 0;
 
-                const index = colors.indexOf(rgb);
-                if (index === -1) {
+                const color = paletteIndex.get(rgb);
+                if (typeof color === 'undefined') {
                     break;
                 }
 
-                data.p1(index);
+                data.p1(color);
             }
         }
     }
@@ -202,6 +218,8 @@ export async function convertImage(index: Packet, srcPath: string, safeName: str
         index.p3(colors[j]);
     }
 
+    const colorIndex = buildColorIndex(colors);
+
     if (sprites.length > 1) {
         for (let y = 0; y < img.bitmap.height / tileY; y++) {
             for (let x = 0; x < img.bitmap.width / tileX; x++) {
@@ -211,11 +229,11 @@ export async function convertImage(index: Packet, srcPath: string, safeName: str
                     w: tileX,
                     h: tileY
                 });
-                writeImage(tile, data, index, colors, sprites[x + y * (img.bitmap.width / tileX)]);
+                writeImage(tile, data, index, colors, sprites[x + y * (img.bitmap.width / tileX)] ?? null, colorIndex);
             }
         }
     } else {
-        writeImage(img, data, index, colors, sprites[0]);
+        writeImage(img, data, index, colors, sprites[0] ?? null, colorIndex);
     }
 
     return data;
