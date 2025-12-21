@@ -22,16 +22,6 @@ export default class LocType extends ConfigType {
         this.parse(server, jag);
     }
 
-    static async loadAsync(dir: string) {
-        const file = await fetch(`${dir}/server/loc.dat`);
-        if (!file.ok) {
-            return;
-        }
-
-        const [server, jag] = await Promise.all([file.arrayBuffer(), Jagfile.loadAsync(`${dir}/client/config`)]);
-        this.parse(new Packet(new Uint8Array(server)), jag);
-    }
-
     static parse(server: Packet, jag: Jagfile) {
         LocType.configNames = new Map();
         LocType.configs = [];
@@ -137,6 +127,7 @@ export default class LocType extends ConfigType {
         } else if (code === 5) {
             const count = dat.g1();
             this.models = new Uint16Array(count);
+            this.shapes = null;
 
             for (let i = 0; i < count; i++) {
                 this.models[i] = dat.g2();
