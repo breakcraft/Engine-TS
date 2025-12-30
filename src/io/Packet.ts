@@ -173,8 +173,8 @@ export default class Packet extends DoublyLinkable {
         return packet;
     }
 
-    static async loadAsync(path: string, seekToEnd: boolean = false): Promise<Packet> {
-        const packet = new Packet(new Uint8Array(await (await fetch(path)).arrayBuffer()));
+    static async fetch(url: string, seekToEnd: boolean = false): Promise<Packet> {
+        const packet = new Packet(new Uint8Array(await (await fetch(url)).arrayBuffer()));
         if (seekToEnd) {
             packet.pos = packet.data.length;
         }
@@ -381,11 +381,11 @@ export default class Packet extends DoublyLinkable {
         }
     }
 
-    bits(): void {
+    bitStart(): void {
         this.bitPos = this.pos << 3;
     }
 
-    bytes(): void {
+    bitEnd(): void {
         this.pos = (this.bitPos + 7) >>> 3;
     }
 
